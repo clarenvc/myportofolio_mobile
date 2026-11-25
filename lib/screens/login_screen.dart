@@ -32,7 +32,9 @@ class _LoginScreenState extends State<LoginScreen> {
         ..hideCurrentSnackBar()
         ..showSnackBar(
           SnackBar(
-            content: Text('Login gagal (HTTP ${e.statusCode}): Periksa username/password.'),
+            content: Text(
+              'Login gagal (HTTP ${e.statusCode}): Periksa username/password.',
+            ),
           ),
         );
     } catch (e) {

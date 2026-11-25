@@ -41,10 +41,7 @@ class ProjectDetailScreen extends StatelessWidget {
             ],
             Text(
               skill.toolName,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(

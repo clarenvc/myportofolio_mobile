@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:http/http.dart' as http;
 import 'package:myportofolio_mobile/config.dart';
 import 'package:myportofolio_mobile/models/project.dart';
@@ -15,7 +16,7 @@ class ApiException implements Exception {
 
 class ApiClient {
   ApiClient({http.Client? client, this.baseUrl = apiBaseUrl})
-      : _client = client ?? http.Client();
+    : _client = client ?? http.Client();
 
   final http.Client _client;
   final String baseUrl;
@@ -34,10 +35,7 @@ class ApiClient {
         .toList();
   }
 
-  Future<Skill> createSkill(
-    Skill skill, {
-    required String token,
-  }) async {
+  Future<Skill> createSkill(Skill skill, {required String token}) async {
     final response = await _client.post(
       _uri('/api/v1/skills/'),
       headers: {
@@ -59,10 +57,7 @@ class ApiClient {
         'Accept': 'application/json',
         'Content-Type': 'application/json; charset=UTF-8',
       },
-      body: jsonEncode({
-        'username': username,
-        'password': password,
-      }),
+      body: jsonEncode({'username': username, 'password': password}),
     );
     _ensureSuccess(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
@@ -72,10 +67,7 @@ class ApiClient {
   Future<void> logout({required String token}) async {
     final response = await _client.post(
       _uri('/api/v1/auth/logout/'),
-      headers: {
-        'Accept': 'application/json',
-        'Authorization': 'Token $token',
-      },
+      headers: {'Accept': 'application/json', 'Authorization': 'Token $token'},
     );
     _ensureSuccess(response);
   }

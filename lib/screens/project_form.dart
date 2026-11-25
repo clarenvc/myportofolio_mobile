@@ -52,9 +52,10 @@ class _ProjectFormPageState extends State<ProjectFormPage> {
     );
 
     try {
-      final created = await context
-          .read<ApiClient>()
-          .createSkill(newSkill, token: token);
+      final created = await context.read<ApiClient>().createSkill(
+        newSkill,
+        token: token,
+      );
       if (!mounted) return;
       await showDialog(
         context: context,
