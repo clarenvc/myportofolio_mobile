@@ -3,7 +3,6 @@ import 'package:http/http.dart' as http;
 import 'package:myportofolio_mobile/config.dart';
 import 'package:myportofolio_mobile/models/project.dart';
 
-/// Exception thrown when an API request returns a non-2xx status code.
 class ApiException implements Exception {
   const ApiException(this.statusCode, this.message);
 
@@ -14,7 +13,6 @@ class ApiException implements Exception {
   String toString() => 'ApiException($statusCode): $message';
 }
 
-/// HTTP client for the MyPortfolio Django REST Framework backend.
 class ApiClient {
   ApiClient({http.Client? client, this.baseUrl = apiBaseUrl})
       : _client = client ?? http.Client();
@@ -24,34 +22,34 @@ class ApiClient {
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
-  Future<List<Project>> getProjects() async {
+  Future<List<Skill>> getSkills() async {
     final response = await _client.get(
-      _uri('/api/v1/projects/'),
+      _uri('/api/v1/skills/'),
       headers: const {'Accept': 'application/json'},
     );
     _ensureSuccess(response);
     final decoded = jsonDecode(response.body) as List<dynamic>;
     return decoded
-        .map((item) => Project.fromJson(item as Map<String, dynamic>))
+        .map((item) => Skill.fromJson(item as Map<String, dynamic>))
         .toList();
   }
 
-  Future<Project> createProject(
-    Project project, {
+  Future<Skill> createSkill(
+    Skill skill, {
     required String token,
   }) async {
     final response = await _client.post(
-      _uri('/api/v1/projects/'),
+      _uri('/api/v1/skills/'),
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json; charset=UTF-8',
         'Authorization': 'Token $token',
       },
-      body: jsonEncode(project.toJson()),
+      body: jsonEncode(skill.toJson()),
     );
     _ensureSuccess(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
-    return Project.fromJson(decoded);
+    return Skill.fromJson(decoded);
   }
 
   Future<String> obtainToken(String username, String password) async {

@@ -2,16 +2,16 @@ import 'package:material_ui/material_ui.dart';
 import 'package:myportofolio_mobile/models/project.dart';
 
 class ProjectDetailScreen extends StatelessWidget {
-  const ProjectDetailScreen({required this.project, super.key});
+  const ProjectDetailScreen({required this.skill, super.key});
 
-  final Project project;
+  final Skill skill;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          project.title,
+          skill.toolName,
           style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -25,14 +25,14 @@ class ProjectDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (project.projectImageUrl.isNotEmpty) ...[
+            if (skill.toolLogoUrl.isNotEmpty) ...[
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Image.network(
-                  project.projectImageUrl,
-                  width: double.infinity,
-                  height: 200,
-                  fit: BoxFit.cover,
+                  skill.toolLogoUrl,
+                  width: 120,
+                  height: 120,
+                  fit: BoxFit.contain,
                   errorBuilder: (context, error, stackTrace) =>
                       const SizedBox.shrink(),
                 ),
@@ -40,7 +40,7 @@ class ProjectDetailScreen extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             Text(
-              project.title,
+              skill.toolName,
               style: const TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
@@ -48,7 +48,7 @@ class ProjectDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Tech Stack: ${project.techStack}',
+              'Category: ${skill.categoryTitle}',
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
@@ -57,17 +57,19 @@ class ProjectDetailScreen extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              project.description,
+              skill.description,
               style: const TextStyle(fontSize: 15, height: 1.5),
             ),
-            const SizedBox(height: 16),
-            Text(
-              'Project URL: ${project.projectUrl}',
-              style: const TextStyle(
-                fontSize: 14,
-                decoration: TextDecoration.underline,
+            if (skill.subSkills.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Sub Skills: ${skill.subSkills}',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),

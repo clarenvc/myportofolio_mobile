@@ -13,18 +13,18 @@ class ProjectListScreen extends StatefulWidget {
 }
 
 class _ProjectListScreenState extends State<ProjectListScreen> {
-  late Future<List<Project>> _projectsFuture;
+  late Future<List<Skill>> _skillsFuture;
 
   @override
   void initState() {
     super.initState();
-    _projectsFuture = context.read<ApiClient>().getProjects();
+    _skillsFuture = context.read<ApiClient>().getSkills();
   }
 
   Future<void> _reload() async {
-    final future = context.read<ApiClient>().getProjects();
+    final future = context.read<ApiClient>().getSkills();
     setState(() {
-      _projectsFuture = future;
+      _skillsFuture = future;
     });
     await future;
   }
@@ -34,7 +34,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'Achievements: Projects',
+          'Achievements: Skills',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.bold,
@@ -44,21 +44,21 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       drawer: const LeftDrawer(),
-      body: FutureBuilder<List<Project>>(
-        future: _projectsFuture,
+      body: FutureBuilder<List<Skill>>(
+        future: _skillsFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
             return Center(
-              child: Padding(
+              child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      'Failed to load projects: ${snapshot.error}',
+                      'Failed to load skills: ${snapshot.error}',
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 12),
@@ -73,8 +73,8 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
             );
           }
 
-          final projects = snapshot.data ?? const <Project>[];
-          if (projects.isEmpty) {
+          final skills = snapshot.data ?? const <Skill>[];
+          if (skills.isEmpty) {
             return RefreshIndicator(
               onRefresh: _reload,
               child: SingleChildScrollView(
@@ -82,7 +82,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                 child: SizedBox(
                   height: MediaQuery.of(context).size.height * 0.7,
                   child: const Center(
-                    child: Text('No projects found.'),
+                    child: Text('No skills found.'),
                   ),
                 ),
               ),
@@ -93,14 +93,14 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
             onRefresh: _reload,
             child: ListView.builder(
               padding: const EdgeInsets.all(12),
-              itemCount: projects.length,
+              itemCount: skills.length,
               itemBuilder: (context, index) {
-                final project = projects[index];
+                final skill = skills[index];
                 return Card(
                   margin: const EdgeInsets.symmetric(vertical: 6),
                   child: ListTile(
                     title: Text(
-                      project.title,
+                      skill.toolName,
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     subtitle: Column(
@@ -108,7 +108,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                       children: [
                         const SizedBox(height: 4),
                         Text(
-                          project.techStack,
+                          skill.categoryTitle,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.primary,
                             fontWeight: FontWeight.w600,
@@ -116,7 +116,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          project.description,
+                          skill.description,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -128,7 +128,7 @@ class _ProjectListScreenState extends State<ProjectListScreen> {
                         context,
                         MaterialPageRoute(
                           builder: (context) =>
-                              ProjectDetailScreen(project: project),
+                              ProjectDetailScreen(skill: skill),
                         ),
                       );
                     },
