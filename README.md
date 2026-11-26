@@ -1,3 +1,5 @@
+[![CI](https://github.com/clarenvc/myportofolio_mobile/actions/workflows/main.yaml/badge.svg)](https://github.com/clarenvc/myportofolio_mobile/actions/workflows/main.yaml)
+
 # MyPortfolio Mobile
 
 Aplikasi mobile lintas platform (*cross-platform*) berbasis **Flutter** untuk ekosistem portofolio pribadi. Proyek ini dibangun sebagai klien *frontend* mobile yang terpisah dari repositori aplikasi web Django sebelumnya, dan akan dikembangkan secara bertahap setiap minggunya.
@@ -5,6 +7,8 @@ Aplikasi mobile lintas platform (*cross-platform*) berbasis **Flutter** untuk ek
 * **Nama:** Karen Lim
 * **NPM:** 2506623982
 * **Kelas:** PBP C
+* **Repositori Backend Django:** [clarenvc/myportfolio](https://github.com/clarenvc/myportfolio)
+* **URL API Backend (PWS):** https://karen-lim-myportfolio.pws.cs.ui.ac.id
 
 ---
 
@@ -20,25 +24,39 @@ Pastikan perangkat lokal kamu sudah terpasang komponen berikut sebelum menjalank
 
 1. **Clone repositori ini ke komputer lokal:**
    ```bash
-   git clone https://github.com/clarenvc/myportofolio_mobile.git
+   git clone [https://github.com/clarenvc/myportofolio_mobile.git](https://github.com/clarenvc/myportofolio_mobile.git)
    cd myportofolio_mobile
    ```
+2. **Unduh seluruh dependensi paket Flutter:**
+    ```bash
+    flutter pub get
+    ```
 
-2. **Clone repositori ini ke komputer lokal:**
-   ```bash
-   flutter pub get
-   ```
+3. **Hasilkan berkas serialisasi JSON (*.g.dart) menggunakan build_runner:**
+    ```bash
+    dart run build_runner build --delete-conflicting-outputs
+    ```
 
-3. **Pastikan tidak ada masalah sintaks dan clone repositori ini ke komputer lokal:**
-   ```bash
-   flutter analyze
-   ```
-   (Pastikan terminal menampilkan pesan: "No issues found!").
+4. **Pastikan tidak ada masalah pemformatan maupun analisis statis:**
+    ```bash
+    dart format --output=none --set-exit-if-changed .
+    flutter analyze
+    ```
+    (Pastikan terminal menampilkan pesan: "No issues found!").
 
-4. **Jalankan aplikasi pada emulator atau perangkat yang terhubung:**
-   ```bash
-   flutter run
-   ```
+5. **Jalankan aplikasi dengan menentukan API_BASE_URL target backend:**
+    - Chrome / Web terhadap server lokal Django:
+      ```bash
+      flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:8000
+      ```
+    - Android Emulator terhadap server lokal Django (default http://10.0.2.2:8000):
+      ```bash
+      flutter run
+      ```
+    - Terhadap server deploy PWS:
+      ```bash
+      flutter run -d chrome --dart-define=API_BASE_URL=[https://karen-lim-myportfolio.pws.cs.ui
+      ```
 
 ---
 
@@ -195,5 +213,68 @@ Sementara itu, `StatefulWidget`** adalah widget yang memiliki objek pendamping b
 > **Prompt 2 (Debugging Layout Overflow pada Viewport Browser):**
 >
 > > _"Setelah menambahkan kartu keempat (`Tambah Edukasi`) pada `GridView.count(crossAxisCount: 3)` di `menu.dart` dan menjalankannya dengan `flutter run -d chrome`, muncul exception `A RenderFlex overflowed by 275 pixels on the bottom` pada widget `Column`. Mengapa penambahan satu kartu ini memicu overflow vertikal di Chrome, dan bagaimana cara mengatasinya tanpa bentrok scroll antara `Column` dan `GridView`?"_
+>
+> </details>
+
+---
+
+### Tugas 9
+
+**1.** Penggunaan **`@JsonSerializable(fieldRename: FieldRename.snake)`** dan **`@JsonKey(includeToJson: false)`** jauh lebih aman dibanding menyusun dan mengirim objek `Map<String, dynamic>` mentah langsung dari widget karena menjamin *type-safety* pada waktu kompilasi (*compile-time*) sekaligus memisahkan tanggung jawab serialisasi data dari lapisan antarmuka (*UI*).
+
+- **`@JsonSerializable(fieldRename: FieldRename.snake)`:** Secara otomatis memetakan penamaan properti standar Dart yang menggunakan *camelCase* (`schoolName`, `startYear`, `endYear`, `starCount`) menjadi kunci JSON *snake_case* (`school_name`, `start_year`, `end_year`, `star_count`) sesuai dengan skema `EducationSerializer` pada Django REST Framework.
+- **`@JsonKey(includeToJson: false)`:** Mengecualikan atribut yang dikelola sepenuhnya oleh server—seperti `id` (UUID) dan `starCount`—saat objek dikonversi menjadi payload JSON untuk permintaan `POST`, sehingga klien tidak mengirimkan nilai `id: null` atau memanipulasi jumlah *star*.
+
+=> **Contoh bug yang dicegah pada model `Education`:** Apabila payload dirakit manual menggunakan `Map<String, dynamic>` di dalam `EducationFormPage`, kesalahan penulisan kunci seperti mengirim `"schoolName"` alih-alih `"school_name"` atau mengirimkan nilai `"start_year"` bertipe `String` (`"2025"`) alih-alih `int` (`2025`) akan menyebabkan `EducationSerializer` di DRF menolak permintaan dengan respons `400 Bad Request` atau mengabaikan atribut tersebut. Dengan kelas model `Education` beranotasi `@JsonSerializable`, ketidakcocokan tipe data langsung tertangkap oleh *analyzer* Dart sebelum aplikasi dijalankan, dan pemetaan kunci *snake_case* dijamin konsisten oleh `education.g.dart`.
+
+**2.** Di dalam Flutter, metode **`build(BuildContext context)`** bersifat deklaratif dan dapat dipanggil berulang kali oleh *framework* setiap kali widget mengalami *rebuild* (misalnya akibat perubahan *state* tema, navigasi, rotasi layar, atau kemunculan notifikasi). Apabila pemanggilan asinkron seperti `context.read<ApiClient>().getEducations()` diletakkan langsung di dalam `build()`, aplikasi akan mengirimkan permintaan HTTP `GET` baru ke server Django secara berulang-ulang setiap kali layar digambar ulang—yang memboroskan jaringan, memicu kedipan indikator *loading*, dan berpotensi menimbulkan *infinite loop*.
+
+=> Dengan menginisialisasi `_educationsFuture` di dalam **`initState()`**, pemanggilan API hanya dieksekusi **satu kali** saat `EducationListScreen` pertama kali dimasukkan ke dalam *widget tree*, dan baru diperbarui secara eksplisit ketika pengguna menarik layar (`RefreshIndicator`) atau menekan tombol *Retry*.
+
+=> Sementara itu, **`ApiClient` sebaiknya melempar `ApiException` daripada mengembalikan `null`** pada respons HTTP non-2xx karena nilai `null` bersifat ambigu dan menghilangkan konteks kegagalan dari server:
+- Dengan melempar `ApiException(statusCode, message)`, widget `FutureBuilder` dapat menangkap kegagalan melalui `snapshot.hasError` dan membedakannya secara tegas dari kondisi data yang memang kosong (`[]` dengan status `200 OK`).
+- Pada operasi tulis seperti pengiriman formulir di `EducationFormPage`, blok `try / on ApiException` dapat memeriksa `e.statusCode` secara spesifik—misalnya langsung memanggil `authState.logout()` dan meminta pengguna login kembali ketika server mengembalikan status `401 Unauthorized` (token tidak valid atau sudah dicabut), serta menampilkan pesan galat informatif melalui `SnackBar` untuk kode status lainnya.
+
+**3.** Perbedaan mendasar antara **`SessionAuthentication`** dan **`TokenAuthentication`** terletak pada cara penyimpanan status sesi dan mekanisme verifikasi keamanannya:
+
+- **`SessionAuthentication` (Tutorial 04/07):** Bersifat *stateful* dan bergantung pada *cookie* sesi (`sessionid`) yang disimpan otomatis oleh browser. Karena browser secara otomatis melampirkan *cookie* pada setiap permintaan ke domain asal, mekanisme ini wajib disertai validasi token CSRF (`X-CSRFToken`) pada setiap permintaan yang mengubah data (`POST`, `PUT`, `PATCH`, `DELETE`) untuk mencegah serangan *Cross-Site Request Forgery*.
+- **`TokenAuthentication` (Tutorial 10):** Bersifat *stateless* tanpa bergantung pada *cookie* browser maupun siklus form CSRF. Klien menukarkan kredensial login satu kali pada *endpoint* `/api/v1/auth/token/` untuk memperoleh kunci string unik, lalu menyertakannya secara eksplisit pada setiap permintaan terproteksi melalui *header* HTTP `Authorization: Token <key>`.
+
+=> **`myportofolio_mobile` menggunakan `TokenAuthentication`** karena aplikasi mobile (Android/iOS) tidak memiliki penyimpanan *cookie* sesi browser bawaan dan tidak merender halaman HTML yang berisi `{% csrf_token %}`—sekaligus memungkinkan kode klien yang sama berjalan lintas platform (Android maupun Flutter Web) tanpa terhambat aturan *cookie* lintas asal (*cross-origin*). Sementara itu, **`SessionAuthentication` tetap diaktifkan** pada `REST_FRAMEWORK["DEFAULT_AUTHENTICATION_CLASSES"]` di proyek Django `myportfolio` agar halaman web portofolio sebelumnya (`skills.html`, `education.html`, `experience.html`) serta antarmuka *Browsable API* DRF tetap dapat diakses menggunakan sesi login browser tanpa perlu diubah.
+
+**4.** Pipeline **`.github/workflows/main.yaml`** membagi proses otomatisasi menjadi dua tahap yang saling bergantung setiap kali ada perubahan yang di-*push* ke branch `main` atau melalui *pull request*:
+
+- **Job `build` (*Continuous Integration* menggunakan `VeryGoodOpenSource/very_good_workflows`):** Bertugas memvalidasi kualitas dan kebenaran kode sebelum artefak rilis dibangun. Di balik layar, workflow `flutter_package.yml@v2` menjalankan perintah `setup` (`dart run build_runner build --delete-conflicting-outputs`) untuk membangkitkan berkas `*.g.dart`, memeriksa konsistensi gaya penulisan kode (`dart format --output=none --set-exit-if-changed`), menjalankan analisis statis untuk mendeteksi potensi *bug* atau *warning* (`flutter analyze`), serta mengeksekusi seluruh pengujian otomatis beserta laporan cakupan kode (`flutter test --coverage` dengan batas `min_coverage: 0`).
+- **Job `build_apk` (*Continuous Delivery*):** Memiliki dependensi `needs: build` sehingga hanya akan dijalankan apabila seluruh pemeriksaan pada job `build` lulus. Job ini menyiapkan lingkungan Flutter stabil, mengunduh dependensi (`flutter pub get`), membangkitkan ulang berkas `*.g.dart` melalui `build_runner`, mengompilasi aplikasi menjadi berkas rilis Android (`flutter build apk --release`), lalu mengunggah `build/app/outputs/flutter-apk/app-release.apk` sebagai artefak bernama `app-release-apk` menggunakan `actions/upload-artifact@v4`.
+
+=> **Alasan `*.g.dart` dimasukkan ke `.gitignore`:** Berkas `*.g.dart` (seperti `education.g.dart` dan `project.g.dart`) merupakan kode *boilerplate* hasil generasi otomatis dari anotasi `@JsonSerializable` yang 100% deterministik dan dapat direproduksi kapan saja oleh `build_runner`—baik di komputer pengembang maupun di *runner* CI GitHub Actions. Mengecualikannya dari Git menjaga riwayat *commit* tetap bersih dari perubahan baris kode mesin yang panjang serta mencegah terjadinya *merge conflict* pada berkas hasil generasi saat bekerja lintas *branch*.
+
+---
+
+> **P.S.** Assignment 9 ini saya kerjakan dengan bantuan Gemini AI, sebagai rekan diskusi saya, asisten _debugging_, serta sebagai _buddy coding_.
+>
+> #### 1. **Strategi Prompting & Tools**
+>
+> - **Tools:** Gemini (berperan sebagai *code reviewer*, asisten *debugging*, dan _buddy coding_).
+> - **Strategi Prompting:** Saya menerapkan *Incremental & Architectural Prompting* dengan menyesuaikan pola integrasi Tutorial 10 ke arsitektur proyek backend Django (`myportfolio`) dan aplikasi mobile (`myportofolio_mobile`) milik saya sendiri. Pengerjaan dipecah secara bertahap mulai dari penyelarasan skema serializer `Education`, pembuatan model `@JsonSerializable`, perluasan `ApiClient`, pembangunan `EducationListScreen` dan `EducationDetailScreen`, *refactoring* formulir `EducationFormPage` untuk `POST` terautentikasi, hingga penyiapan pipeline CI/CD.
+>
+> #### 2. **Bagian Spesifik yang Dibantu AI & Pengerjaan Manual**
+>
+> - **Bagian yang Dibantu AI (Serialisasi JSON, State Autentikasi & Penanganan Error API):** Membantu merancang pemetaan anotasi `@JsonSerializable(fieldRename: FieldRename.snake)` dan `@JsonKey` pada model `Education`, memperluas `ApiClient` dengan metode `getEducations()` dan `createEducation()`, menyusun alur `FutureBuilder` + `RefreshIndicator` pada `EducationListScreen`, serta merancang penanganan galat `ApiException` (termasuk *auto-logout* saat status `401 Unauthorized`) pada `EducationFormPage`.
+> - **Integrasi, Pengujian End-to-End & Pengerjaan Manual:** Saya secara mandiri menyesuaikan dekorator `@authentication_classes([SessionAuthentication, TokenAuthentication])` pada *endpoint* `education_list` di proyek backend Django, menjalankan `build_runner`, menguji seluruh skenario *end-to-end* (akses publik `GET`, pengalihan login lewat `ensureLoggedIn`, penyimpanan entri baru `POST` yang terverifikasi di web Django, simulasi pencabutan token untuk menguji respons `401`, serta `logout`), dan memastikan `dart format`, `flutter analyze`, dan `flutter test` lulus tanpa isu.
+> - **Tinjauan Kritis terhadap Keterbatasan AI:** Pada tahap awal, contoh kode yang diberikan mengasumsikan *endpoint* backend menggunakan `/api/v1/projects/` sebagaimana modul tutorial, sedangkan backend Django saya menggunakan `/api/v1/skills/` dan `/api/v1/education/` serta masih membatasi dekorator view hanya pada `SessionAuthentication`. Selain itu, pada tampilan *error* `FutureBuilder`, pesan galat HTTP yang panjang berisiko memicu *overflow* vertikal jika tidak dibungkus *scroll view*. Saya mengidentifikasi ketidaksesuaian tersebut saat pengujian lokal, menyelaraskan *endpoint* dan kelas autentikasi pada backend Django, serta membungkus tampilan galat dengan `SingleChildScrollView`.
+>
+> #### 3. **Cuplikan Chat Log AI**
+>
+> <details>
+> <summary> Klik untuk melihat tinjauan diskusi bersama AI</summary>
+>
+> **Prompt 1 (Penyelarasan Autentikasi Backend DRF & Skema Model `Education`):**
+>
+> > _"Pada proyek Django saya dari Tugas 6, `education_list` menggunakan dekorator `@authentication_classes([SessionAuthentication])`, sedangkan Flutter mengirimkan header `Authorization: Token <key>`. Mengapa dekorator di level view tersebut menimpa `DEFAULT_AUTHENTICATION_CLASSES` di `settings.py`, dan bagaimana cara mengaktifkan `TokenAuthentication` tanpa merusak unit test CSRF sesi browser yang sudah ada?"_
+>
+> **Prompt 2 (Manajemen Lifecycle `FutureBuilder` & Penanganan Sesi Kedaluwarsa `401`):**
+>
+> > _"Pada `EducationListScreen`, mengapa inisialisasi `getEducations()` harus disimpan dalam variabel state di `initState()` dan diperbarui lewat `setState()` saat `RefreshIndicator` dipanggil? Selain itu, pada `EducationFormPage`, bagaimana alur yang paling bersih ketika `createEducation()` melempar `ApiException` dengan status `401` agar token lokal di `AuthState` langsung dibersihkan dan pengguna diminta login ulang?"_
 >
 > </details>
