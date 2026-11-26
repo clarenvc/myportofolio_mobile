@@ -22,10 +22,7 @@ class _EducationFormPageState extends State<EducationFormPage> {
       appBar: AppBar(
         title: const Text(
           'Add Education Form',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Theme.of(context).colorScheme.primary,
         iconTheme: const IconThemeData(color: Colors.white),
