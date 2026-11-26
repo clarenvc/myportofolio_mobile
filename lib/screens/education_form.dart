@@ -1,5 +1,11 @@
 import 'package:material_ui/material_ui.dart';
+import 'package:myportofolio_mobile/models/education.dart';
+import 'package:myportofolio_mobile/screens/education_list_screen.dart';
+import 'package:myportofolio_mobile/services/api_client.dart';
+import 'package:myportofolio_mobile/services/auth_state.dart';
+import 'package:myportofolio_mobile/widgets/auth_guard.dart';
 import 'package:myportofolio_mobile/widgets/left_drawer.dart';
+import 'package:provider/provider.dart';
 
 class EducationFormPage extends StatefulWidget {
   const EducationFormPage({super.key});
@@ -10,11 +16,111 @@ class EducationFormPage extends StatefulWidget {
 
 class _EducationFormPageState extends State<EducationFormPage> {
   final _formKey = GlobalKey<FormState>();
-
   String _schoolName = "";
-  String _startYear = "";
+  int _startYear = 0;
   String _endYear = "";
   String _description = "";
+  bool _isSubmitting = false;
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    if (!await ensureLoggedIn(context)) return;
+    if (!mounted) return;
+
+    final authState = context.read<AuthState>();
+    final token = authState.token;
+    if (token == null) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    final newEducation = Education(
+      schoolName: _schoolName.trim(),
+      startYear: _startYear,
+      endYear: _endYear.trim(),
+      description: _description.trim(),
+    );
+
+    try {
+      final created = await context.read<ApiClient>().createEducation(
+        newEducation,
+        token: token,
+      );
+      if (!mounted) return;
+      await showDialog(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Riwayat edukasi berhasil disimpan!'),
+            content: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('Nama Institusi: ${created.schoolName}'),
+                  Text('Tahun Mulai: ${created.startYear}'),
+                  Text('Tahun Selesai: ${created.endYear}'),
+                  Text('Deskripsi: ${created.description}'),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                child: const Text('Lihat Daftar'),
+                onPressed: () {
+                  Navigator.pop(dialogContext);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const EducationListScreen(),
+                    ),
+                  );
+                },
+              ),
+            ],
+          );
+        },
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.statusCode == 401) {
+        await authState.logout();
+        if (!mounted) return;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Sesi token berakhir (401). Silakan login ulang.'),
+            ),
+          );
+        await ensureLoggedIn(context);
+      } else {
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(
+              content: Text(
+                'Gagal menyimpan edukasi (HTTP ${e.statusCode}): ${e.message}',
+              ),
+            ),
+          );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(
+          SnackBar(content: Text('Terjadi kesalahan jaringan: $e')),
+        );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +141,6 @@ class _EducationFormPageState extends State<EducationFormPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // === 1. Nama Institusi ===
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: TextFormField(
@@ -43,27 +148,18 @@ class _EducationFormPageState extends State<EducationFormPage> {
                     hintText: "Contoh: Universitas Indonesia",
                     labelText: "Nama Institusi / Sekolah",
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _schoolName = value ?? "";
-                    });
-                  },
-                  validator: (String? value) {
+                  onChanged: (value) => setState(() => _schoolName = value),
+                  validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return "Nama institusi tidak boleh kosong!";
-                    }
-                    if (value.trim().length < 3) {
-                      return "Nama institusi minimal terdiri dari 3 karakter!";
                     }
                     return null;
                   },
                 ),
               ),
-
-              // === 2. Tahun Mulai ===
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: TextFormField(
@@ -72,31 +168,26 @@ class _EducationFormPageState extends State<EducationFormPage> {
                     hintText: "Contoh: 2025",
                     labelText: "Tahun Mulai",
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
-                  onChanged: (String? value) {
+                  onChanged: (value) {
                     setState(() {
-                      _startYear = value ?? "";
+                      _startYear = int.tryParse(value) ?? 0;
                     });
                   },
-                  validator: (String? value) {
+                  validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return "Tahun mulai tidak boleh kosong!";
                     }
-                    final parsedYear = int.tryParse(value.trim());
-                    if (parsedYear == null || value.trim().length != 4) {
-                      return "Tahun mulai harus berupa 4 digit angka!";
-                    }
-                    if (parsedYear < 1950 || parsedYear > 2100) {
-                      return "Masukkan tahun mulai yang valid (1950–2100)!";
+                    final year = int.tryParse(value);
+                    if (year == null || year < 1950 || year > 2100) {
+                      return "Masukkan tahun mulai yang valid!";
                     }
                     return null;
                   },
                 ),
               ),
-
-              // === 3. Tahun Selesai ===
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: TextFormField(
@@ -104,67 +195,39 @@ class _EducationFormPageState extends State<EducationFormPage> {
                     hintText: "Contoh: 2029 atau Present",
                     labelText: "Tahun Selesai",
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _endYear = value ?? "";
-                    });
-                  },
-                  validator: (String? value) {
+                  onChanged: (value) => setState(() => _endYear = value),
+                  validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return "Tahun selesai tidak boleh kosong!";
-                    }
-                    final trimmed = value.trim();
-                    if (trimmed.toLowerCase() == "present") {
-                      return null;
-                    }
-                    final parsedEnd = int.tryParse(trimmed);
-                    if (parsedEnd == null || trimmed.length != 4) {
-                      return "Isi dengan 4 digit tahun atau 'Present'!";
-                    }
-                    final parsedStart = int.tryParse(_startYear.trim());
-                    if (parsedStart != null && parsedEnd < parsedStart) {
-                      return "Tahun selesai tidak boleh lebih kecil dari tahun mulai!";
                     }
                     return null;
                   },
                 ),
               ),
-
-              // === 4. Deskripsi ===
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: TextFormField(
                   maxLines: 4,
                   decoration: InputDecoration(
-                    hintText: "Contoh: S1 Ilmu Komputer - Fokus Rekayasa Perangkat Lunak",
+                    hintText: "Jurusan, gelar, atau deskripsi aktivitas",
                     labelText: "Deskripsi",
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8.0),
+                      borderRadius: BorderRadius.circular(5.0),
                     ),
                   ),
-                  onChanged: (String? value) {
-                    setState(() {
-                      _description = value ?? "";
-                    });
-                  },
-                  validator: (String? value) {
+                  onChanged: (value) => setState(() => _description = value),
+                  validator: (value) {
                     if (value == null || value.trim().isEmpty) {
                       return "Deskripsi tidak boleh kosong!";
-                    }
-                    if (value.trim().length < 10) {
-                      return "Deskripsi minimal terdiri dari 10 karakter!";
                     }
                     return null;
                   },
                 ),
               ),
-
-              const SizedBox(height: 16.0),
-
-              // === Tombol Simpan ===
+              const SizedBox(height: 12),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: ElevatedButton(
@@ -173,49 +236,20 @@ class _EducationFormPageState extends State<EducationFormPage> {
                       Theme.of(context).colorScheme.primary,
                     ),
                   ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      showDialog(
-                        context: context,
-                        builder: (context) {
-                          return AlertDialog(
-                            title: const Text('Edukasi berhasil ditambahkan!'),
-                            content: SingleChildScrollView(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text('Nama Institusi: ${_schoolName.trim()}'),
-                                  Text('Tahun Mulai: ${_startYear.trim()}'),
-                                  Text('Tahun Selesai: ${_endYear.trim()}'),
-                                  Text('Deskripsi: ${_description.trim()}'),
-                                ],
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                child: const Text('Tutup'),
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                  _formKey.currentState!.reset();
-                                  setState(() {
-                                    _schoolName = "";
-                                    _startYear = "";
-                                    _endYear = "";
-                                    _description = "";
-                                  });
-                                },
-                              ),
-                            ],
-                          );
-                        },
-                      );
-                    }
-                  },
-                  child: const Text(
-                    "Simpan",
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  onPressed: _isSubmitting ? null : _submit,
+                  child: _isSubmitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text(
+                          "Save",
+                          style: TextStyle(color: Colors.white),
+                        ),
                 ),
               ),
             ],

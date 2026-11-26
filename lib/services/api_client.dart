@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:myportofolio_mobile/config.dart';
 import 'package:myportofolio_mobile/models/project.dart';
+import 'package:myportofolio_mobile/models/education.dart';
 
 class ApiException implements Exception {
   const ApiException(this.statusCode, this.message);
@@ -23,6 +24,7 @@ class ApiClient {
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
+  // SKILLS
   Future<List<Skill>> getSkills() async {
     final response = await _client.get(
       _uri('/api/v1/skills/'),
@@ -48,6 +50,37 @@ class ApiClient {
     _ensureSuccess(response);
     final decoded = jsonDecode(response.body) as Map<String, dynamic>;
     return Skill.fromJson(decoded);
+  }
+
+  // EDUCATOIN
+  Future<List<Education>> getEducations() async {
+    final response = await _client.get(
+      _uri('/api/v1/education/'),
+      headers: const {'Accept': 'application/json'},
+    );
+    _ensureSuccess(response);
+    final decoded = jsonDecode(response.body) as List<dynamic>;
+    return decoded
+        .map((item) => Education.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Education> createEducation(
+    Education education, {
+    required String token,
+  }) async {
+    final response = await _client.post(
+      _uri('/api/v1/education/'),
+      headers: {
+        'Accept': 'application/json',
+        'Content-Type': 'application/json; charset=UTF-8',
+        'Authorization': 'Token $token',
+      },
+      body: jsonEncode(education.toJson()),
+    );
+    _ensureSuccess(response);
+    final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+    return Education.fromJson(decoded);
   }
 
   Future<String> obtainToken(String username, String password) async {
