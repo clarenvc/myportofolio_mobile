@@ -77,31 +77,31 @@ class LeftDrawer extends StatelessWidget {
             },
           ),
           ListTile(
-          leading: const Icon(Icons.menu_book_outlined),
-          title: const Text('Educations'),
-          onTap: () {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const EducationListScreen(),
-              ),
-            );
-          },
-        ),
-        ListTile(
-          leading: const Icon(Icons.school_outlined),
-          title: const Text('Add Education'),
-          onTap: () async {
-            if (!await ensureLoggedIn(context)) return;
-            if (!context.mounted) return;
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => const EducationFormPage(),
-              ),
-            );
-          },
-        ),
+            leading: const Icon(Icons.menu_book_outlined),
+            title: const Text('Educations'),
+            onTap: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EducationListScreen(),
+                ),
+              );
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.school_outlined),
+            title: const Text('Add Education'),
+            onTap: () async {
+              if (!await ensureLoggedIn(context)) return;
+              if (!context.mounted) return;
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const EducationFormPage(),
+                ),
+              );
+            },
+          ),
           const Divider(),
           if (!isLoggedIn)
             ListTile(

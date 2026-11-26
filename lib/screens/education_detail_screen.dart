@@ -27,10 +27,7 @@ class EducationDetailScreen extends StatelessWidget {
           children: [
             Text(
               education.schoolName,
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
@@ -55,10 +52,7 @@ class EducationDetailScreen extends StatelessWidget {
             const Divider(height: 24),
             const Text(
               'Deskripsi',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             Text(
