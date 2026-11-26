@@ -24,8 +24,7 @@ class ApiClient {
 
   Uri _uri(String path) => Uri.parse('$baseUrl$path');
 
-
-// SKILLS
+  // SKILLS
   Future<List<Skill>> getSkills() async {
     final response = await _client.get(
       _uri('/api/v1/skills/'),
@@ -53,8 +52,7 @@ class ApiClient {
     return Skill.fromJson(decoded);
   }
 
-
-// EDUCATOIN
+  // EDUCATOIN
   Future<List<Education>> getEducations() async {
     final response = await _client.get(
       _uri('/api/v1/education/'),
